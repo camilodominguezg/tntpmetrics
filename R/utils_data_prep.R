@@ -158,7 +158,7 @@ data_scale_check_ipg <- function(data) {
 
   # RFS should be on a 1-4 scale (if it exists)
   if ("rfs_overall" %in% names(data)) {
-    rfs_check <- all(na.omit(data[, "rfs_overall"]) %in% 1:4)
+    rfs_check <- all(na.omit(data$rfs_overall) %in% 1:4)
     if (!rfs_check) {
       stop(
         paste(
@@ -289,24 +289,25 @@ construct_maker_ipg <- function(data) {
     data,
     miss_col = is.na(col),
     miss_ca = is.na(ca1_overall) | is.na(ca2_overall) | is.na(ca3_overall),
+    miss_ca6plus = miss_ca & grade_level>=6,
     miss_rfs = form == "Literacy" & grade_level <= 5 & is.na(rfs_overall) & miss_ca
   )
 
   if (sum(data$miss_rfs, na.rm = T) > 0 & !is.infinite(sum(data$miss_rfs, na.rm = T))) {
-    stop(
+    warning(
       paste(
-        sum(data$miss_lit_k5, na.rm = T), "K-5 Literacy observation(s) dropped because they are",
-        "missing an overall RFS score and missing the Core Actions. These observations need an",
+        sum(data$miss_rfs, na.rm = T), "K-5 Literacy observation(s) dropped because they are",
+        "missing an overall RFS score and missing some Core Actions. These observations need an",
         "overall RFS score or all three Core Actions, or both."
       ),
       call. = F
     )
   }
 
-  if (sum(data$miss_ca) > 0) {
-    stop(
+  if (sum(data$miss_ca6plus) > 0) {
+    warning(
       paste(
-        sum(data$miss_ca), "Observation(s) dropped because of missing score(s) on at least one of",
+        sum(data$miss_ca6plus), "5-12 Observation(s) dropped because of missing score(s) on at least one of",
         "the Core Actions. In many cases, missing scores should be set to the lowest possible value",
         "or, if it's inelgible, the entire observation should be removed before scoring.",
         "Check the scoring guide for more details."
@@ -316,7 +317,7 @@ construct_maker_ipg <- function(data) {
   }
 
   if (sum(data$miss_col) > 0) {
-    stop(
+    warning(
       paste(
         sum(data$miss_col), "Observation(s) dropped because of missing score(s) on at Culture of",
         "Learning. All observations should be rated on Culture of Learning."
@@ -331,7 +332,7 @@ construct_maker_ipg <- function(data) {
     construct = dplyr::case_when(
       form == "Literacy" & grade_level <= 5 & miss_ca ~
         0.75 * rfs_overall + 0.25 * col,
-      form == "Literacy" & grade_level <= 5 & !miss_ca ~
+      form == "Literacy" & grade_level <= 5 & !miss_ca & !is.na(rfs_overall) ~
         0.25 * col + 0.75 * ((rfs_overall + ca1_overall + ca2_overall + ca3_overall) / 4),
       TRUE ~ (col + ca1_overall + ca2_overall + ca3_overall) / 4
     ),
@@ -339,7 +340,6 @@ construct_maker_ipg <- function(data) {
     miss_ca = NULL,
     miss_rfs = NULL
   )
-
 }
 
 
